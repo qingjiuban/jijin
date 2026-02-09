@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基金收益管理系统 - 用户主页</title>
+    
+    <!-- 引入 Font Awesome 图标库 -->
+    <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
+<link rel="stylesheet" href="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/css/fontawesome.min.css">
+    
+    <!-- 引入 Chart.js 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 引入 Supabase 客户端库 (此处仅作为引用声明，实际逻辑使用 Mock 实现以保证单文件运行) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* --- 全局样式 --- */
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --success-color: #10b981; /* 绿色 - 上涨 */
+            --danger-color: #ef4444;  /* 红色 - 下跌 */
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- 导航栏 --- */
+        .navbar {
+            background-color: var(--card-bg);
+            box-shadow: var(--shadow);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-color);
+        }
+
+        /* --- 主内容区域 --- */
+        .main-container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 2rem auto;
+            width: 100%;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 左右两栏 */
+            gap: 2rem;
+        }
+
+        /* 响应式：小屏幕堆叠 */
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* --- 基金列表 --- */
+        .fund-list-container {
+            overflow-x: auto;
+        }
+
+        .fund-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .fund-table th, .fund-table td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .fund-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .text-up {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .text-down {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .action-btn:hover {
+            color: var(--danger-color);
+        }
+
+        /* --- 添加基金表单 --- */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-error {
+            color: var(--danger-color);
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        /* --- 收益图表 --- */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        .chart-controls {
+            margin-bottom: 1rem;
+        }
+
+        .chart-select {
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .chart-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        /* --- 页脚 --- */
+        .footer {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+
+        /* --- 自定义弹窗 (Modal) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* --- Toast 提示 --- */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+
+        .toast {
+            background-color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .toast.success { border-left-color: var(--success-color); }
+        .toast.error { border-left-color: var(--danger-color); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>基金收益管理系统</span>
+        </div>
+        <div class="nav-user">
+            <span class="user-info" id="user-display">加载中...</span>
+            <button id="logout-btn" class="btn btn-outline">
+                <i class="fa-solid fa-right-from-bracket"></i> 登出
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <main class="main-container">
+        
+        <!-- 左栏：基金持仓列表 & 添加表单 -->
+        <section class="left-column">
+            <!-- 基金持仓列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">我的基金持仓</h2>
+                    <button id="refresh-btn" class="btn btn-outline" title="刷新数据">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+                <div class="fund-list-container">
+                    <table class="fund-table">
+                        <thead>
+                            <tr>
+                                <th>代码</th>
+                                <th>名称</th>
+                                <th>单位净值</th>
+                                <th>估算净值</th>
+                                <th>涨跌幅</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fund-list-body">
+                            <!-- 动态插入基金数据 -->
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #999;">暂无持仓数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 添加基金表单 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">添加新基金</h2>
+                </div>
+                <form id="add-fund-form">
+                    <div class="form-group">
+                        <label class="form-label" for="add-fund-code">基金代码</label>
+                        <input type="text" id="add-fund-code" class="form-input" placeholder="输入6位数字基金代码" pattern="\d{6}" maxlength="6" required>
+                        <div class="form-error" id="code-error">请输入有效的6位数字代码</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="add-fund-name">基金名称</label>
+                        <input type="text" id="add-fund-name" class="form-input" placeholder="输入基金名称" required>
+                        <div class="form-error" id="name-error">基金名称不能为空</div>
+                    </div>
+                    <button type="submit" id="add-fund-btn" class="btn btn-primary" style="width: 100%;">
+                        <i class="fa-solid fa-plus"></i> 添加基金
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 右栏：收益图表 -->
+        <section class="right-column">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">累计收益走势图</h2>
+                </div>
+                <div class="chart-controls">
+                    <select id="fund-selector" class="chart-select">
+                        <option value="">请选择基金...</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fund-chart-canvas"></canvas>
+                </div>
+                <div class="chart-info">
+                    <p>图表展示该基金自添加以来的累计收益变化情况。</p>
+                    <p id="chart-status-text">数据加载中...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>&copy; 2026 基金收益管理系统. All rights reserved.</p>
+        <p>数据来源：天天基金 (仅供参考，不构成投资建议)</p>
+    </footer>
+
+    <!-- 自定义确认弹窗 -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">删除确认</h3>
+            <p class="modal-body">删除该基金时，是否保留历史收益数据？</p>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="modal-cancel">取消</button>
+                <button class="btn btn-danger" id="modal-clear-history">清空历史</button>
+                <button class="btn btn-primary" id="modal-keep-history">保留历史</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        /**
+         * 模块化架构实现
+         * 为了满足单文件要求，以下代码将所有模块逻辑内联，
+         * 但结构上严格遵循 config.js, auth.js, fund-api.js 等模块划分。
+         */
+
+        // ==========================================
+        // 1. config.js - 配置信息
+        // ==========================================
+        const CONFIG = {
+            SUPABASE_URL: 'https://mock.supabase.co', // 模拟地址
+            SUPABASE_KEY: 'mock-key',
+            HOLIDAYS: ['2026-01-01', '2026-02-17', '2026-02-18', '2026-04-04', '2026-05-01', '2026-06-08', '2026-09-19', '2026-10-01', '2026-10-02'],
+            FUND_API_BASE: 'https://fundgz.1234567.com.cn/js/',
+            SESSION_DURATION: 7 * 24 * 60 * 60 * 1000 // 7天
+        };
+
+        // ==========================================
+        // 2. Mock Supabase Client (用于模拟数据库交互)
+        // ==========================================
+        class MockSupabaseClient {
+            constructor() {
+                this.auth = {
+                    user: null,
+                    signIn: async (credentials) => {
+                        // 简单模拟登录
+                        const users = JSON.parse(localStorage.getItem('db_users') || '[]');
+                        const user = users.find(u => u.user_name === credentials.username && u.password === credentials.password);
+                        if (user) {
+                            this.auth.user = user;
+                            localStorage.setItem('auth_session', JSON.stringify({
+                                user_name: user.user_name,
+                                is_admin: user.is_admin,
+                                expires_at: Date.now() + CONFIG.SESSION_DURATION
+                            }));
+                            return { data: { user }, error: null };
+                        }
+                        return { data: null, error: { message: '用户名或密码错误' } };
+                    },
+                    signOut: async () => {
+                        this.auth.user = null;
+                        localStorage.removeItem('auth_session');
+                        return { error: null };
+                    },
+                    getSession: () => {
+                        const session = JSON.parse(localStorage.getItem('auth_session') || 'null');
+                        if (session && session.expires_at > Date.now()) {
+                            this.auth.user = { user_name: session.user_name, is_admin: session.is_admin };
+                            return session;
+                        }
+                        return null;
+                    }
+                };
+
+                this.from = (table) => {
+                    return new MockTableBuilder(table);
+                };
+            }
+
+            static createClient(url, key) {
+                return new MockSupabaseClient();
+            }
+        }
+
+        class MockTableBuilder {
+            constructor(table) {
+                this.table = table;
+                this.query = null;
+                this.filters = [];
+                this.isSingle = false;
+            }
+
+            select(columns = '*') {
+                this.query = columns;
+                return this;
+            }
+
+            eq(column, value) {
+                this.filters.push({ type: 'eq', column, value });
+                return this;
+            }
+
+            delete() {
+                return this;
+            }
+
+            // 模拟数据获取
+            async then(resolve) {
+                // 模拟网络延迟
+                await new Promise(r => setTimeout(r, 300));
+
+                const data = JSON.parse(localStorage.getItem(`db_${this.table}`) || '[]');
+                let result = data;
+
+                // 应用过滤器
+                this.filters.forEach(filter => {
+                    if (filter.type === 'eq') {
+                        result = result.filter(row => row[filter.column] == filter.value);
+                    }
+                });
+
+                // 处理逻辑删除
+                if (this.table === 'funds') {
+                    // 默认不显示已删除的，除非显式查询
+                    // 这里简化处理：只返回 is_deleted=false 的
+                    result = result.filter(row => !row.is_deleted);
+                }
+
+                resolve({ data: result, error: null });
+            }
+
+            // 模拟插入
+            async insert(row) {
+                await new Promise(r => setTimeout(r, 300));
+                const data = JSON.parse(localStorage.getItem(`db_${this.table}`) || '[]');
+                const newRow = { ...row, id: Date.now(), created_at: new Date().toISOString() };
+                data.push(newRow);
+                localStorage.setItem(`db_${this.table}`, JSON.stringify(data));
+                return { data: [newRow], error: null };
+            }
+
+            // 模拟更新
+            async update(updates) {
+                await new Promise(r => setTimeout(r, 300));
+                let data = JSON.parse(localStorage.getItem(`db_${this.table}`) || '[]');
+                // 简单实现：找到第一条匹配的并更新（实际应更复杂）
+                // 注意：这里为了演示，简化了 update 的 filter 处理
+                // 实际逻辑中，update 需要配合 filter 使用
+                return { error: null }; 
+            }
+        }
+
+        // 初始化 Supabase 客户端
+        const supabase = MockSupabaseClient.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+
+        // ==========================================
+        // 3. auth.js - 认证模块
+        // ==========================================
+        const Auth = {
+            checkAuthState: () => {
+                const session = supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'index.html';
+                    return false;
+                }
+                return session;
+            },
+
+            logout: async () => {
+                await supabase.auth.signOut();
+                window.location.href = 'index.html';
+            },
+
+            getCurrentUser: () => {
+                return supabase.auth.user;
+            }
+        };
+
+        // ==========================================
+        // 4. fund-api.js - 基金数据接口模块
+        // ==========================================
+        const FundAPI = {
+            // 使用 JSONP 获取实时数据
+            fetchRealtimeData: (fundCode) => {
+                return new Promise((resolve, reject) => {
+                    const url = `${CONFIG.FUND_API_BASE}${fundCode}.js`;
+                    
+                    // 创建全局回调函数
+                    const callbackName = `jsonpgz`;
+                    
+                    // 清理旧脚本
+                    const oldScript = document.getElementById(`script-${fundCode}`);
+                    if (oldScript) oldScript.remove();
+
+                    const script = document.createElement('script');
+                    script.id = `script-${fundCode}`;
+                    script.src = url;
+                    script.onerror = () => {
+                        reject(new Error('网络请求失败'));
+                    };
+
+                    // 临时覆盖全局回调
+                    window[callbackName] = (data) => {
+                        // 标准化数据结构
+                        const standardData = {
+                            fund_code: data.fundcode,
+                            fund_name: data.name,
+                            nav: parseFloat(data.dwjz), // 单位净值
+                            estimated_nav: parseFloat(data.gsz), // 估算净值
+                            change_rate: parseFloat(data.gszzl), // 涨跌幅
+                            change_amount: (parseFloat(data.gsz) - parseFloat(data.dwjz)).toFixed(4),
+                            update_time: data.gztime,
+                            is_valid: true
+                        };
+                        resolve(standardData);
+                        // 清理
+                        delete window[callbackName];
+                        script.remove();
+                    };
+
+                    document.body.appendChild(script);
+                });
+            }
+        };
+
+        // ==========================================
+        // 5. fund-crud.js - 基金增删改查模块
+        // ==========================================
+        const FundCRUD = {
+            getUserFunds: async (userName) => {
+                const { data, error } = await supabase
+                    .from('funds')
+                    .select('*')
+                    .eq('user_name', userName);
+                return data || [];
+            },
+
+            addFund: async (userName, fundCode, fundName) => {
+                // 检查重复
+                const existing = await supabase.from('funds').select('*').eq('fund_code', fundCode);
+                // 由于是 mock，这里简单处理一下重复逻辑
+                const allFunds = JSON.parse(localStorage.getItem('db_funds') || '[]');
+                const duplicate = allFunds.find(f => f.user_name === userName && f.fund_code === fundCode && !f.is_deleted);
+                
+                if (duplicate) {
+                    throw new Error('该基金已在持仓列表中');
+                }
+
+                const { data, error } = await supabase.from('funds').insert({
+                    user_name: userName,
+                    fund_code: fundCode,
+                    fund_name: fundName,
+                    is_deleted: false
+                });
+                return data;
+            },
+
+            deleteFund: async (userName, fundCode, keepHistory) => {
+                const allFunds = JSON.parse(localStorage.getItem('db_funds') || '[]');
+                const fundIndex = allFunds.findIndex(f => f.user_name === userName && f.fund_code === fundCode && !f.is_deleted);
+
+                if (fundIndex === -1) {
+                    throw new Error('基金不存在');
+                }
+
+                if (keepHistory) {
+                    // 逻辑删除
+                    allFunds[fundIndex].is_deleted = true;
+                    localStorage.setItem('db_funds', JSON.stringify(allFunds));
+                } else {
+                    // 物理删除基金记录
+                    allFunds.splice(fundIndex, 1);
+                    localStorage.setItem('db_funds', JSON.stringify(allFunds));
+                    
+                    // 清空历史快照
+                    let snapshots = JSON.parse(localStorage.getItem('db_snapshots') || '[]');
+                    snapshots = snapshots.filter(s => !(s.user_name === userName && s.fund_code === fundCode));
+                    localStorage.setItem('db_snapshots', JSON.stringify(snapshots));
+                }
+            }
+        };
+
+        // ==========================================
+        // 6. snapshot.js - 快照模块
+        // ==========================================
+        const Snapshot = {
+            isTradingDay: (date) => {
+                const day = date.getDay();
+                if (day === 0 || day === 6) return false; // 周末
+                const dateStr = date.toISOString().split('T')[0];
+                if (CONFIG.HOLIDAYS.includes(dateStr)) return false; // 节假日
+                return true;
+            },
+
+            createSnapshotsForAllFunds: async (userName, funds) => {
+                if (!Snapshot.isTradingDay(new Date())) return;
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                let snapshots = JSON.parse(localStorage.getItem('db_snapshots') || '[]');
+
+                for (const fund of funds) {
+                    // 检查今日是否已存在
+                    const exists = snapshots.find(s => 
+                        s.user_name === userName && 
+                        s.fund_code === fund.fund_code && 
+                        s.snapshot_date === todayStr
+                    );
+                    if (exists) continue;
+
+                    // 获取实时数据计算收益
+                    try {
+                        const realtimeData = await FundAPI.fetchRealtimeData(fund.fund_code);
+                        
+                        // 模拟计算：假设持有1000份，计算当日收益
+                        // 实际逻辑应根据持仓份额计算，这里简化为基于涨跌幅的模拟收益
+                        const holdings = 1000; 
+                        const dailyProfit = (realtimeData.change_rate / 100) * holdings * realtimeData.nav;
+                        
+                        // 获取上一交易日累计收益
+                        const prevSnapshots = snapshots.filter(s => s.fund_code === fund.fund_code && s.snapshot_date < todayStr);
+                        prevSnapshots.sort((a, b) => new Date(b.snapshot_date) - new Date(a.snapshot_date));
+                        const lastTotalProfit = prevSnapshots.length > 0 ? prevSnapshots[0].total_profit : 0;
+
+                        const totalProfit = lastTotalProfit + dailyProfit;
+
+                        snapshots.push({
+                            user_name: userName,
+                            fund_code: fund.fund_code,
+                            snapshot_date: todayStr,
+                            daily_profit: parseFloat(dailyProfit.toFixed(2)),
+                            total_profit: parseFloat(totalProfit.toFixed(2)),
+                            created_at: new Date().toISOString()
+                        });
+                    } catch (e) {
+                        console.error(`快照更新失败 ${fund.fund_code}:`, e);
+                    }
+                }
+                localStorage.setItem('db_snapshots', JSON.stringify(snapshots));
+            },
+
+            getSnapshotsByFund: async (userName, fundCode) => {
+                const snapshots = JSON.parse(localStorage.getItem('db_snapshots') || '[]');
+                const filtered = snapshots
+                    .filter(s => s.user_name === userName && s.fund_code === fundCode)
+                    .sort((a, b) => new Date(a.snapshot_date) - new Date(b.snapshot_date));
+                return filtered;
+            }
+        };
+
+        // ==========================================
+        // 7. chart.js - 图表模块
+        // ==========================================
+        let chartInstance = null;
+
+        const ChartManager = {
+            renderChart: (canvasId, snapshots, fundName) => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+
+                const labels = snapshots.map(s => {
+                    const date = new Date(s.snapshot_date);
+                    return `${date.getMonth() + 1}-${date.getDate()}`;
+                });
+                const data = snapshots.map(s => s.total_profit);
+
+                // 判断最新收益正负决定线条颜色
+                const lastProfit = data.length > 0 ? data[data.length - 1] : 0;
+                const lineColor = lastProfit >= 0 ? '#10b981' : '#ef4444';
+
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${fundName} 累计收益`,
+                            data: data,
+                            borderColor: lineColor,
+                            backgroundColor: 'rgba(255, 255, 255, 0)',
+                            borderWidth: 2,
+                            pointBackgroundColor: lineColor,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false,
+                            tension: 0.3 // 平滑曲线
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `累计收益: ${context.parsed.y.toFixed(2)} 元`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: '#f3f4f6'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // ==========================================
+        // 8. 页面逻辑与初始化
+        // ==========================================
+        
+        // UI 工具函数
+        const UI = {
+            showToast: (message, type = 'success') => {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    <span>${message}</span>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            },
+
+            renderFundList: (funds, realtimeDataMap) => {
+                const tbody = document.getElementById('fund-list-body');
+                tbody.innerHTML = '';
+
+                if (funds.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999; padding: 2rem;">暂无持仓数据，请添加基金</td></tr>';
+                    return;
+                }
+
+                funds.forEach(fund => {
+                    const realtime = realtimeDataMap[fund.fund_code] || {};
+                    const changeRate = realtime.change_rate || 0;
+                    const changeClass = changeRate >= 0 ? 'text-up' : 'text-down';
+                    const sign = changeRate >= 0 ? '+' : '';
+                    const updateTime = realtime.update_time || '--';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${fund.fund_code}</td>
+                        <td>${fund.fund_name}</td>
+                        <td>${realtime.nav || '--'}</td>
+                        <td style="font-weight:bold">${realtime.estimated_nav || '--'}</td>
+                        <td class="${changeClass}">${sign}${changeRate}%</td>
+                        <td style="font-size:0.8rem; color:#666">${updateTime}</td>
+                        <td>
+                            <button class="action-btn delete-btn" data-code="${fund.fund_code}" data-name="${fund.fund_name}">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            updateSelector: (funds) => {
+                const selector = document.getElementById('fund-selector');
+                selector.innerHTML = '<option value="">请选择基金...</option>';
+                funds.forEach(fund => {
+                    const option = document.createElement('option');
+                    option.value = fund.fund_code;
+                    option.textContent = `${fund.fund_code} - ${fund.fund_name}`;
+                    selector.appendChild(option);
+                });
+            },
+
+            showDeleteModal: (fundCode, fundName) => {
+                const modal = document.getElementById('delete-modal');
+                modal.classList.add('active');
+                
+                // 绑定一次性事件
+                const keepBtn = document.getElementById('modal-keep-history');
+                const clearBtn = document.getElementById('modal-clear-history');
+                const cancelBtn = document.getElementById('modal-cancel');
+
+                const close = () => modal.classList.remove('active');
+
+                const handleDelete = async (keepHistory) => {
+                    try {
+                        const user = Auth.getCurrentUser();
+                        await FundCRUD.deleteFund(user.user_name, fundCode, keepHistory);
+                        UI.showToast(keepHistory ? '已删除基金（保留历史）' : '已删除基金（清空历史）');
+                        await loadPageData(); // 重新加载数据
+                        close();
+                    } catch (error) {
+                        UI.showToast(error.message, 'error');
+                    }
+                };
+
+                keepBtn.onclick = () => handleDelete(true);
+                clearBtn.onclick = () => handleDelete(false);
+                cancelBtn.onclick = close;
+            }
+        };
+
+        // 核心加载函数
+        async function loadPageData() {
+            const user = Auth.getCurrentUser();
+            if (!user) return;
+
+            // 1. 获取持仓列表
+            const funds = await FundCRUD.getUserFunds(user.user_name);
+            
+            // 2. 获取实时数据并更新列表
+            const realtimeMap = {};
+            const promises = funds.map(async fund => {
+                try {
+                    const data = await FundAPI.fetchRealtimeData(fund.fund_code);
+                    realtimeMap[fund.fund_code] = data;
+                } catch (e) {
+                    console.error(`获取 ${fund.fund_code} 数据失败`);
+                }
+            });
+            await Promise.all(promises);
+
+            UI.renderFundList(funds, realtimeMap);
+            UI.updateSelector(funds);
+
+            // 3. 触发快照更新 (后台静默执行)
+            Snapshot.createSnapshotsForAllFunds(user.user_name, funds);
+
+            // 4. 默认显示第一只基金的图表
+            if (funds.length > 0) {
+                const firstFund = funds[0];
+                document.getElementById('fund-selector').value = firstFund.fund_code;
+                await updateChart(firstFund.fund_code, firstFund.fund_name);
+            } else {
+                document.getElementById('chart-status-text').textContent = '暂无数据';
+                if (chartInstance) chartInstance.destroy();
+            }
+        }
+
+        async function updateChart(fundCode, fundName) {
+            const user = Auth.getCurrentUser();
+            if (!fundCode) return;
+
+            document.getElementById('chart-status-text').textContent = '加载图表数据中...';
+            const snapshots = await Snapshot.getSnapshotsByFund(user.user_name, fundCode);
+            
+            if (snapshots.length === 0) {
+                document.getElementById('chart-status-text').textContent = '该基金暂无历史快照数据';
+                if (chartInstance) chartInstance.destroy();
+            } else {
+                document.getElementById('chart-status-text').textContent = `共加载 ${snapshots.length} 个交易日数据`;
+                ChartManager.renderChart('fund-chart-canvas', snapshots, fundName);
+            }
+        }
+
+        // ==========================================
+        // 9. 事件绑定与初始化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 检查登录
+            const session = Auth.checkAuthState();
+            if (session) {
+                document.getElementById('user-display').textContent = `用户: ${session.user_name}`;
+                
+                // 初始化演示数据（如果是第一次运行）
+                if (!localStorage.getItem('db_users')) {
+                    localStorage.setItem('db_users', JSON.stringify([
+                        { user_name: '12345678', password: '12345678', is_admin: false, is_active: true }
+                    ]));
+                }
+
+                await loadPageData();
+            }
+
+            // 登出
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                Auth.logout();
+            });
+
+            // 刷新
+            document.getElementById('refresh-btn').addEventListener('click', async () => {
+                const btn = document.getElementById('refresh-btn');
+                btn.querySelector('i').classList.add('fa-spin');
+                await loadPageData();
+                btn.querySelector('i').classList.remove('fa-spin');
+                UI.showToast('数据已刷新');
+            });
+
+            // 添加基金表单
+            document.getElementById('add-fund-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const codeInput = document.getElementById('add-fund-code');
+                const nameInput = document.getElementById('add-fund-name');
+                const codeError = document.getElementById('code-error');
+                const nameError = document.getElementById('name-error');
+
+                const code = codeInput.value.trim();
+                const name = nameInput.value.trim();
+                let hasError = false;
+
+                // 验证
+                if (!/^\d{6}$/.test(code)) {
+                    codeError.style.display = 'block';
+                    hasError = true;
+                } else {
+                    codeError.style.display = 'none';
+                }
+
+                if (!name) {
+                    nameError.style.display = 'block';
+                    hasError = true;
+                } else {
+                    nameError.style.display = 'none';
+                }
+
+                if (hasError) return;
+
+                try {
+                    const user = Auth.getCurrentUser();
+                    // 尝试获取一下实时数据以验证代码有效性
+                    await FundAPI.fetchRealtimeData(code);
+                    
+                    await FundCRUD.addFund(user.user_name, code, name);
+                    UI.showToast('基金添加成功');
+                    codeInput.value = '';
+                    nameInput.value = '';
+                    await loadPageData();
+                } catch (error) {
+                    UI.showToast(error.message || '添加失败，请检查基金代码', 'error');
+                }
+            });
+
+            // 基金列表删除按钮代理
+            document.getElementById('fund-list-body').addEventListener('click', (e) => {
+                const btn = e.target.closest('.delete-btn');
+                if (btn) {
+                    const code = btn.dataset.code;
+                    const name = btn.dataset.name;
+                    UI.showDeleteModal(code, name);
+                }
+            });
+
+            // 图表选择器变更
+            document.getElementById('fund-selector').addEventListener('change', async (e) => {
+                const code = e.target.value;
+                const name = e.target.options[e.target.selectedIndex].text.split(' - ')[1];
+                await updateChart(code, name);
+            });
+        });
+
+    </script>
+</body>
+</html>
