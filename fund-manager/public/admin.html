@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基金收益管理系统 - 管理员页面</title>
+    
+    <!-- 引入 Font Awesome 图标库 -->
+    <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
+<link rel="stylesheet" href="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/css/fontawesome.min.css">
+    
+    <!-- 引入本地样式表 (如果存在) -->
+    <link rel="stylesheet" href="public/css/style.css">
+    
+    <!-- 引入 Supabase 客户端库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* 全局样式重置与变量 */
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 导航栏样式 */
+        header {
+            background-color: var(--bg-card);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-badge {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        /* 主内容区域布局 */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 卡片容器 */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background-color: #f9fafb;
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-active {
+            background-color: #d1fae5;
+            color: #047857;
+        }
+        .status-inactive {
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* 开关控件 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--success-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .checkbox-group input {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .form-footer {
+            margin-top: 1.5rem;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* 页脚 */
+        footer {
+            margin-top: auto;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Toast 消息提示 */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            min-width: 300px;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success { border-left-color: var(--success-color); }
+        .toast.error { border-left-color: var(--danger-color); }
+
+        .toast-content {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 加载状态 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            border-radius: 0.5rem;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: var(--danger-color);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <header>
+        <nav>
+            <div class="nav-brand">
+                <i class="fa-solid fa-chart-line"></i>
+                基金收益管理系统
+            </div>
+            <div class="nav-actions">
+                <span class="admin-badge"><i class="fa-solid fa-user-shield"></i> 管理员</span>
+                <button id="refresh-users-btn" class="btn btn-outline" title="刷新列表">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <a href="home.html" id="back-home-btn" class="btn btn-outline">
+                    <i class="fa-solid fa-house"></i> 返回主页
+                </a>
+                <button id="logout-btn" class="btn btn-danger">
+                    <i class="fa-solid fa-right-from-bracket"></i> 登出
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main>
+        <!-- 左栏：用户列表 -->
+        <section class="card" style="position: relative;">
+            <div id="table-loading" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+            
+            <div class="card-header">
+                <h2 class="card-title">用户管理</h2>
+                <span style="font-size: 0.875rem; color: var(--text-secondary);">共 <span id="user-count">0</span> 位用户</span>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>用户名</th>
+                            <th>权限</th>
+                            <th>创建时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list-body">
+                        <!-- 用户列表将通过 JS 动态渲染 -->
+                    </tbody>
+                </table>
+                <div id="empty-state" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                    <i class="fa-solid fa-users-slash" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                    <p>暂无用户数据</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右栏：创建新用户 -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">创建新用户</h2>
+            </div>
+            
+            <form id="create-user-form">
+                <div class="form-group">
+                    <label for="new-user-name">用户名 (8位数字)</label>
+                    <input type="text" id="new-user-name" placeholder="例如：12345678" pattern="\d{8}" maxlength="8" required>
+                    <div id="username-error" class="error-message">用户名必须是8位数字</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="new-user-password">密码</label>
+                    <input type="password" id="new-user-password" placeholder="设置登录密码" required>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="new-user-is-admin">
+                    <label for="new-user-is-admin" style="margin-bottom: 0; cursor: pointer;">设为管理员</label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="new-user-is-active" checked>
+                    <label for="new-user-is-active" style="margin-bottom: 0; cursor: pointer;">账户激活</label>
+                </div>
+
+                <div class="form-footer">
+                    <button type="submit" id="create-user-btn" class="btn btn-primary btn-block">
+                        <i class="fa-solid fa-plus"></i> 创建用户
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>&copy; 2026 基金收益管理系统. All rights reserved.</p>
+    </footer>
+
+    <!-- Toast 容器 -->
+    <div id="toast-container"></div>
+
+    <!-- JavaScript 逻辑 -->
+    <script type="module">
+        /**
+         * 注意：为了满足“单文件交付”的要求，以下代码模拟了 config.js 和 auth.js 的功能。
+         * 在实际项目中，请将 Supabase 配置提取到 public/js/config.js，
+         * 将认证逻辑提取到 public/js/auth.js，并通过 import 语句引入。
+         */
+
+        // --- 模拟 public/js/config.js ---
+        // 请在此处替换为你的 Supabase URL 和 Key
+        const SUPABASE_URL = 'https://xyzcompany.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; 
+
+        let supabase;
+        try {
+            // 尝试初始化 Supabase 客户端
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                console.error("Supabase library not loaded.");
+            }
+        } catch (error) {
+            console.error("Supabase initialization failed:", error);
+        }
+
+        // --- 模拟 public/js/auth.js ---
+        const Auth = {
+            getCurrentUser: () => {
+                const userStr = localStorage.getItem('currentUser');
+                return userStr ? JSON.parse(userStr) : null;
+            },
+            
+            isAdmin: () => {
+                const user = Auth.getCurrentUser();
+                return user && user.is_admin === true;
+            },
+
+            logout: () => {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'index.html'; // 假设登录页为 index.html
+            }
+        };
+
+        // --- 页面逻辑 ---
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. 权限检查
+            if (!Auth.isAdmin()) {
+                showToast('权限不足：请使用管理员账号登录', 'error');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+                return;
+            }
+
+            // 2. 初始化 DOM 元素引用
+            const userListBody = document.getElementById('user-list-body');
+            const emptyState = document.getElementById('empty-state');
+            const userCountSpan = document.getElementById('user-count');
+            const tableLoading = document.getElementById('table-loading');
+            const createUserForm = document.getElementById('create-user-form');
+            const refreshBtn = document.getElementById('refresh-users-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const usernameInput = document.getElementById('new-user-name');
+            const usernameError = document.getElementById('username-error');
+
+            // 3. 加载用户列表
+            const fetchUsers = async () => {
+                tableLoading.style.display = 'flex';
+                try {
+                    // 调用 Supabase 查询
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    renderUserList(data);
+                } catch (err) {
+                    console.error('Failed to fetch users:', err);
+                    showToast('加载用户列表失败，请检查网络或数据库配置', 'error');
+                    // 如果是演示环境且连接失败，可以显示假数据以便预览 UI (此处按需开启)
+                    // renderUserList([]); 
+                } finally {
+                    tableLoading.style.display = 'none';
+                }
+            };
+
+            // 4. 渲染用户列表
+            const renderUserList = (users) => {
+                userListBody.innerHTML = '';
+                userCountSpan.textContent = users.length;
+
+                if (users.length === 0) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                emptyState.style.display = 'none';
+
+                users.forEach(user => {
+                    const tr = document.createElement('tr');
+                    
+                    const isAdminBadge = user.is_admin 
+                        ? `<span class="status-badge status-active"><i class="fa-solid fa-shield-halved"></i> 管理员</span>`
+                        : `<span class="status-badge status-inactive"><i class="fa-solid fa-user"></i> 普通用户</span>`;
+
+                    const formattedDate = new Date(user.created_at).toLocaleString('zh-CN', {
+                        year: 'numeric', month: '2-digit', day: '2-digit', 
+                        hour: '2-digit', minute: '2-digit'
+                    });
+
+                    tr.innerHTML = `
+                        <td style="font-family: monospace; font-weight: 600;">${user.user_name}</td>
+                        <td>${isAdminBadge}</td>
+                        <td style="color: var(--text-secondary); font-size: 0.8rem;">${formattedDate}</td>
+                        <td>
+                            <label class="switch">
+                                <input type="checkbox" 
+                                    ${user.is_active ? 'checked' : ''} 
+                                    onchange="window.toggleUserStatus('${user.user_name}', this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" 
+                                onclick="window.toggleUserStatus('${user.user_name}', ${!user.is_active})">
+                                ${user.is_active ? '禁用' : '激活'}
+                            </button>
+                        </td>
+                    `;
+                    userListBody.appendChild(tr);
+                });
+            };
+
+            // 5. 创建新用户
+            createUserForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const username = usernameInput.value.trim();
+                const password = document.getElementById('new-user-password').value;
+                const isAdmin = document.getElementById('new-user-is-admin').checked;
+                const isActive = document.getElementById('new-user-is-active').checked;
+
+                // 客户端验证
+                if (!/^\d{8}$/.test(username)) {
+                    usernameError.style.display = 'block';
+                    showToast('用户名格式错误', 'error');
+                    return;
+                } else {
+                    usernameError.style.display = 'none';
+                }
+
+                try {
+                    // 检查用户名唯一性
+                    const { data: existingUser, error: checkError } = await supabase
+                        .from('users')
+                        .select('user_name')
+                        .eq('user_name', username)
+                        .maybeSingle();
+
+                    if (checkError) throw checkError;
+                    if (existingUser) {
+                        showToast('该用户名已存在', 'error');
+                        return;
+                    }
+
+                    // 插入新用户
+                    const { error: insertError } = await supabase
+                        .from('users')
+                        .insert([{
+                            user_name: username,
+                            password: password, // 实际项目中应哈希处理
+                            is_admin: isAdmin,
+                            is_active: isActive
+                        }]);
+
+                    if (insertError) throw insertError;
+
+                    showToast(`用户 ${username} 创建成功`, 'success');
+                    createUserForm.reset();
+                    // 重置默认状态
+                    document.getElementById('new-user-is-active').checked = true;
+                    fetchUsers(); // 刷新列表
+
+                } catch (err) {
+                    console.error('Create user failed:', err);
+                    showToast('创建用户失败: ' + err.message, 'error');
+                }
+            });
+
+            // 6. 全局暴露切换状态函数 (供 HTML onclick 调用)
+            window.toggleUserStatus = async (username, newStatus) => {
+                const actionText = newStatus ? '激活' : '禁用';
+                if (!confirm(`确定要${actionText}用户 ${username} 吗？`)) {
+                    // 如果用户取消，重置开关状态 (通过刷新列表实现)
+                    fetchUsers(); 
+                    return;
+                }
+
+                try {
+                    const { error } = await supabase
+                        .from('users')
+                        .update({ is_active: newStatus })
+                        .eq('user_name', username);
+
+                    if (error) throw error;
+
+                    showToast(`用户 ${username} 已${actionText}`, 'success');
+                    fetchUsers(); // 刷新列表以更新 UI
+                } catch (err) {
+                    console.error('Toggle status failed:', err);
+                    showToast('操作失败: ' + err.message, 'error');
+                    fetchUsers(); // 出错也刷新以重置开关状态
+                }
+            };
+
+            // 7. 绑定其他按钮事件
+            refreshBtn.addEventListener('click', () => {
+                fetchUsers();
+                showToast('列表已刷新', 'success');
+            });
+
+            logoutBtn.addEventListener('click', () => {
+                Auth.logout();
+            });
+
+            // 8. 初始加载
+            fetchUsers();
+        });
+
+        // --- 工具函数：Toast 提示 ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? '<i class="fa-solid fa-check-circle" style="color:var(--success-color)"></i>' : '<i class="fa-solid fa-circle-exclamation" style="color:var(--danger-color)"></i>';
+
+            toast.innerHTML = `
+                <div class="toast-content">
+                    ${icon} <span style="margin-left:0.5rem">${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:1.2rem;">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
